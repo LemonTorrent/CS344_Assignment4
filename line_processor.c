@@ -11,8 +11,21 @@
 size_t bufsize = 1000;
 int arrsize = 1000;
 int printsize = 80;
+
+
 char buffer1[50][1000];
+// Initialize the mutex for buffer 1
+pthread_mutex_t mutex_1 = PTHREAD_MUTEX_INITIALIZER;
+// Initialize the condition variable for buffer 1
+pthread_cond_t full_1 = PTHREAD_COND_INITIALIZER;
+
 char buffer2[50][1000];
+// Initialize the mutex for buffer 2
+pthread_mutex_t mutex_2 = PTHREAD_MUTEX_INITIALIZER;
+// Initialize the condition variable for buffer 2
+pthread_cond_t full_2 = PTHREAD_COND_INITIALIZER;
+
+
 char buffer3[50][1000];
 
 size_t characters;
@@ -33,58 +46,94 @@ int endBuf4;
 
 bool ending;
 
+pthread_mutex_t arr1Mutex;
+pthread_mutex_t arr2Mutex;
+pthread_mutex_t arr3Mutex;
+
 
 void getInput(){
+    
 
     char temp[1000];
     char *t = temp;
 
-    printf("Type something: ");
+    bool first = true;
+
+    printf("Type something. Input will end when you type '-1' on its own line, then hit enter: ");
     characters = getline(&t,&arrsize,stdin);
 
     while (strcmp(t, "STOP\n") != 0) {
-        printf("%zu characters were read.\n",characters);
+        // printf("%zu characters were read.\n",characters);
         printf("You typed: '%s'\n",temp);
 
+        if (first != true) {
+            pthread_mutex_lock(&arr1Mutex);
+        }
+        
+
         strcpy(buffer1[endBuf1], temp);
-        printf("Buffer: '%s'\n", buffer1[endBuf1]);
+        // printf("Buffer: '%s'\n", buffer1[endBuf1]);
 
         endBuf1 = (endBuf1 + 1) % bufsize;
 
-        characters = getline(&t,&arrsize,stdin);
+        pthread_mutex_unlock(&arr1Mutex);
 
+
+        characters = getline(&t,&arrsize,stdin);
+        first = false;
     }
 
+    pthread_mutex_lock(&arr1Mutex);
     strcpy(buffer1[endBuf1], "-1\n");
     endBuf1 = (endBuf1 + 1) % bufsize;
+    pthread_mutex_unlock(&arr1Mutex);
 
     ending = true;
+
+    printf("\n");
 
     return;
 }
 
 void removeSep(){
+    
+
 
     bool continueSep = true;
     char temp [arrsize];
+    bool first = true;
 
     // while (startBuf1 < endBuf1){
     while (continueSep == true) {
         // copy contents of buffer 1
         // strcpy(buffer2[endBuf2], buffer1[startBuf1]);
-        printf("Startbuf1 = %i\n", startBuf1);
+        // printf("Startbuf1 = %i\n", startBuf1);
+        printf("Thred 2 accessing buffer 1\n");
+
+        pthread_mutex_lock(&arr1Mutex);
         strcpy(temp, buffer1[startBuf1]);
-        printf("Buffer1 arr %i: '%s'\n", startBuf1, buffer1[startBuf1]);
+        
+        // printf("Buffer1 arr %i: '%s'\n", startBuf1, buffer1[startBuf1]);
         memset(buffer1[startBuf1], 0, sizeof(buffer1[startBuf1]));
         startBuf1 = (startBuf1 + 1) % bufsize;
+        pthread_mutex_unlock(&arr1Mutex);
 
+        printf("Copied string: %s\n", temp);
         temp[strlen(temp) - 1] = ' ';
+
+
+        if (first != true) {
+            pthread_mutex_lock(&arr2Mutex);
+        }
         strcpy(buffer2[endBuf2], temp);
-        printf("Buffer2 arr %i: '%s'\n", endBuf2, buffer2[endBuf2]);
+        // printf("Buffer2 arr %i: '%s'\n", endBuf2, buffer2[endBuf2]);
         endBuf2 = (endBuf2 + 1) % bufsize;
+        pthread_mutex_unlock(&arr2Mutex);
+
+        first = false;
 
         if (strcmp(temp, "-1 ") == 0) {
-            printf("MUST END!\n");
+            // printf("MUST END!\n");
             continueSep = false;
         }
         
@@ -161,7 +210,7 @@ char * replaceWord(const char* s, const char* oldW,
 
     //printf("In buf3: '%s'\n", buffer3[endBuf3]);
 
-    printf("Result of replacement = '%s'\n", result);
+    // printf("Result of replacement = '%s'\n", result);
     // endBuf3 = (endBuf3 + 1) % 50;
 
     return result;
@@ -172,24 +221,33 @@ void replacePlus(){
 
     char initial [arrsize];
     bool contReplacePlus = true;
+    bool first = true;
 
     // while (startBuf2 < endBuf2) {
     while (contReplacePlus == true) {
+        pthread_mutex_lock(&arr2Mutex);
         strcpy(initial, buffer2[startBuf2]);
         startBuf2 = (startBuf2 + 1) % 50;
+        pthread_mutex_unlock(&arr2Mutex);
     
-
+        if (first == false) {
+            pthread_mutex_lock(&arr3Mutex);
+        }
         strcpy(buffer3[endBuf3], replaceWord(initial, c, d));
+        endBuf3 = (endBuf3 + 1) % 50;
+        pthread_mutex_unlock(&arr3Mutex);
 
         if (strcmp(initial, "-1 ") == 0) {
-            printf("MUST END REPLACE PLUS!\n");
+            // printf("MUST END REPLACE PLUS!\n");
             contReplacePlus = false;
 
         }
 
-        printf("In buf3: '%s'\n", buffer3[endBuf3]);
+        first = false;
 
-        endBuf3 = (endBuf3 + 1) % 50;
+        // printf("In buf3: '%s'\n", buffer3[endBuf3]);
+
+        
     }
 
     return;
@@ -211,7 +269,7 @@ Algorithm:
 */
 void printString() {
 
-    printf("\n\n starting print string: \n\n");
+    // printf("\n\n starting print string: \n\n");
 
     char temp [arrsize];
     char printLine [printsize + 10];
@@ -220,12 +278,16 @@ void printString() {
     int curr = 0;
     int currPrint = 0;
     int templen;
+    bool foundEnd = false;
 
+    pthread_mutex_lock(&arr3Mutex);
     strcpy(temp, buffer3[startBuf3]);
     memset(buffer3[startBuf3], 0, sizeof(buffer3[startBuf3]));
     startBuf3 += 1 % 50;
+    pthread_mutex_unlock(&arr3Mutex);
+
     templen = strlen(temp);
-    printf("Buffer 3 '%s'\n", temp);
+    // printf("Buffer 3 '%s'\n", temp);
 
     //if (strlen(temp) < printsize){
     //    printf("Less than\n");
@@ -243,11 +305,12 @@ void printString() {
     //}
     memset(printLine, 0, sizeof(printLine));
 
-    printf("Start buf3 %i, end buf3 %i\n", startBuf3, endBuf3);
+    // printf("Start buf3 %i, end buf3 %i\n", startBuf3, endBuf3);
 
-    printf("Starting print line '%s'\n", printLine);
+    // printf("Starting print line '%s'\n", printLine);
     // while (curr < templen) {
-    while (startBuf3 <= endBuf3) {
+    // while (startBuf3 <= endBuf3) {
+    while (foundEnd == false) {
         // printf("%c", temp[curr]);
         printLine [currPrint] = temp[curr];
         // printf("%c\n", temp[curr]);
@@ -256,23 +319,29 @@ void printString() {
         // printf("Line: '%s', num %i\n\n", printLine, currPrint);
         if (currPrint % 80 == 0) {
             printLine [currPrint] = '\0';
-            printf("Final Print Line: '%s'\n\n", printLine);
+            printf("%s\n", printLine);
             memset(printLine, 0, sizeof(printLine));
             currPrint = 0;
         }
 
         if (curr >= templen) {
-            printf("Getting new line from buffer\n");
+            // printf("Getting new line from buffer\n");
             // get new line
+            pthread_mutex_lock(&arr3Mutex);
             strcpy(temp, buffer3[startBuf3]);
-            printf("Temp = '%s'\n", temp);
+            memset(buffer3[startBuf3], 0, sizeof(buffer3[startBuf3]));
+            startBuf3 += 1 % 50;
+            pthread_mutex_unlock(&arr3Mutex);
+
+            // printf("Temp = '%s'\n", temp);
             if (strcmp(temp, "-1 ") == 0) {
-                printf("MUST END PRINTING!\n");
+                // printf("MUST END PRINTING!\n");
+                foundEnd = true;
                 return;
             }
-            memset(buffer3[startBuf3], 0, sizeof(buffer3[startBuf3]));
-            printf("Buffer = '%s'\n", buffer3[startBuf3]);
-            startBuf3 += 1 % 50;
+            
+            // printf("Buffer = '%s'\n", buffer3[startBuf3]);
+            
             templen = strlen(temp);
             curr = 0;
         }
@@ -280,10 +349,51 @@ void printString() {
 
     printf("\n");
 
-    printf("After print string\n");
+    // printf("After print string\n");
     
 
     // printf("Printline: '%s'\n", printLine);
+}
+
+void *thread1(void *args) {
+    pthread_mutex_lock(&arr1Mutex);
+    printf("Inside thread 1\n");
+    getInput();
+
+    printf("Ending thread 1\n");
+
+    return NULL;
+}
+
+void *thread2(void *args) {
+
+    pthread_mutex_lock(&arr2Mutex);
+
+    printf("Inside thread 2");
+    removeSep();
+    printf("Ending thread 2\n");
+
+    return NULL;
+}
+
+void *thread3(void *args) {
+    pthread_mutex_lock(&arr3Mutex);
+
+    printf("Inside thread 3");
+    replacePlus();
+    printf("Ending thread 3\n");
+
+    return NULL;
+}
+
+void *thread4(void *args) {
+    // pthread_mutex_lock(&arr3Mutex);
+
+    printf("Inside thread 4");
+    printString();
+    printf("Ending thread 4\n");
+
+    return NULL;
 }
 
 int main(int argc, char *argv[])
@@ -292,52 +402,6 @@ int main(int argc, char *argv[])
     // Don't need to handle input. linux does this on its own.
 
     ending = false;
-
-    getInput();
-
-    
-
-    printf("Buffer in main: '%s'\n", buffer1[startBuf1]);
-    printf("Buffer in main: '%s'\n", buffer1[startBuf1 + 1]);
-    printf("Buffer in main: '%s'\n", buffer1[startBuf1 + 2]);
-
-    removeSep();
-
-    printf("Buffer in main: '%s'\n", buffer2[startBuf2]);
-    printf("Buffer in main: '%s'\n", buffer2[startBuf2 + 1]);
-    printf("Buffer in main: '%s'\n", buffer2[startBuf2 + 2]);
-
-    // printf(buffer1);
-
-    replacePlus();
-
-    printf("Printing buffer\n");
-    for (int i = 0; i < endBuf3; i++){
-        printf("%s\n", buffer3[i]);
-    }
-
-    printString();
-
-    return 0;
-
-    removeSep();
-
-    return 0;
-
-    printf("In main\n");
-
-    printf("You typed: '%s'\n",buffer1[0]);
-
-    removeSep();
-
-    printf("After buffer: '%s'\n",buffer1[0]);
-
-    // replacePlus();
-    // result = replaceWord(buffer, c, d);
-
-
-    // printf("Original string should be replaced: %s\n", result);
-
     startBuf1 = 0;
     endBuf1 = 0;
 
@@ -349,6 +413,35 @@ int main(int argc, char *argv[])
 
     startBuf4 = 0;
     endBuf4 = 0;
+
+    pthread_t input_t, remove_sep_t, rep_plus_t, output_t;
+    // Create the threads
+
+    // getInput();
+    pthread_create(&input_t, NULL, thread1, NULL);
+    
+    pthread_create(&remove_sep_t, NULL, thread2, NULL);
+    pthread_create(&rep_plus_t, NULL, thread3, NULL);
+    pthread_create(&output_t, NULL, thread4, NULL);
+
+
+    pthread_join(input_t, NULL);
+    pthread_join(remove_sep_t, NULL);
+    pthread_join(rep_plus_t, NULL);
+
+    
+    pthread_join(output_t, NULL);
+
+    // printf("Printing buffer\n");
+    // for (int i = 0; i < endBuf2; i++){
+    //    printf("%s\n", buffer2[i]);
+    // }
+
+    
+
+    // printString();
+    // replacePlus();
+    // printString();
 
     return 0;
 }
