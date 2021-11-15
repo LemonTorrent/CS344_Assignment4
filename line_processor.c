@@ -187,20 +187,18 @@ void removeSep(){
     return;
 }
 
-// Function to replace a string with another
-// string
-// Credit: https://www.geeksforgeeks.org/c-program-replace-word-text-another-given-word/
-char * replaceWord(const char* s, const char* oldW,
-                  const char* newW)
-{
+/*
+ * Function to replace a string with another string
+ * Credit: https://www.geeksforgeeks.org/c-program-replace-word-text-another-given-word/
+*/
+char * replaceWord(const char* s, const char* oldW, const char* newW) {
     char initial [arrsize];
     char result [arrsize];
     int i, cnt = 0;
     int newWlen = strlen(newW);
     int oldWlen = strlen(oldW);
 
-    // Counting the number of times old word
-    // occur in the string
+    // Counting the number of times old word occur in the string
     for (i = 0; s[i] != '\0'; i++) {
         if (strstr(&s[i], oldW) == &s[i]) {
             cnt++;
@@ -210,14 +208,16 @@ char * replaceWord(const char* s, const char* oldW,
         }
     }
   
-    // Making new string of enough length
-    // result = (char*)malloc(i + cnt * (newWlen - oldWlen) + 1);
-  
+    // set index to 0
     i = 0;
+    // while there are still characters in the string:
     while (*s) {
         // compare the substring with the result
         if (strstr(s, oldW) == s) {
+            // copy contents
             strcpy(&result[i], newW);
+
+            // increment indexes
             i += newWlen;
             s += oldWlen;
         }
@@ -225,32 +225,25 @@ char * replaceWord(const char* s, const char* oldW,
             result[i++] = *s++;
     }
   
+    // set end of string to null char
     result[i] = '\0';
 
-    // strcpy(buffer3[endBuf3], result);
-
-    //printf("Result of replacement = '%s'\n", result);
-
-    //printf("In buf3: '%s'\n", buffer3[endBuf3]);
-
-    // printf("Result of replacement = '%s'\n", result);
-    //NULL;
-    // NULL;
-    // endBuf3 = (endBuf3 + 1) % 50;
-
     return result;
-    // return result;
 }
 
+/*
+ * Replaces plus signs with carrot symbols
+*/
 void replacePlus(){
 
     char initial [arrsize];
     bool contReplacePlus = true;
     bool first = true;
 
-    // while (startBuf2 < endBuf2) {
+    // continue while the -1 line hasn't been found
     while (contReplacePlus == true) {
         
+        // Lock arr2 to copy contents into local string
         pthread_mutex_lock(&arr2Mutex);
         strcpy(initial, buffer2[startBuf2]);
 
@@ -266,15 +259,20 @@ void replacePlus(){
         //}
 
         if (strcmp(initial, "") != 0) {
+            // Lock arr3 if this isn't the first time using loop
             if (first == false) {
                 pthread_mutex_lock(&arr3Mutex);
             }
+
+            // copy replaced word version into arr3
             strcpy(buffer3[endBuf3], replaceWord(initial, c, d));
             endBuf3 = (endBuf3 + 1) % 50;
-            // pthread_mutex_unlock(&arr3Mutex);
+            
 
             
             pthread_mutex_unlock(&arr3Mutex);
+
+            // If the line is -1, return because we have reached the end of the file
 
             if (strcmp(initial, "-1 ") == 0) {
                 // printf("MUST END REPLACE PLUS!\n");
@@ -300,23 +298,12 @@ void replacePlus(){
     return;
 }
 
-
 /*
-Algorithm:
-
-1. Check if temp has more than 80 char.
-2. If not, copy from buffer 3 to temp.
-3. 
-
-1. copy line from buffer
-2. copy up to 80 char to print line, print
-3. repeat until printline has less than 80 char
-4. get another line from buffer
-
+ * Print strings of length 80
 */
 void printString() {
 
-    // printf("\n\n starting print string: \n\n");
+    
 
     char temp [arrsize];
     char printLine [printsize + 10];
@@ -327,47 +314,30 @@ void printString() {
     int templen;
     bool foundEnd = false;
 
+    // Lock arrary 3, copy to local string
     pthread_mutex_lock(&arr3Mutex);
     strcpy(temp, buffer3[startBuf3]);
-    // printf("Result in 4 of copying from arr 3: %s\n", temp);
+    // clear string contents
     memset(buffer3[startBuf3], 0, sizeof(buffer3[startBuf3]));
+    // increment index or arr3
     startBuf3 += 1 % 50;
     pthread_mutex_unlock(&arr3Mutex);
 
     templen = strlen(temp);
-    // printf("Buffer 3 '%s'\n", temp);
-
-    //if (strlen(temp) < printsize){
-    //    printf("Less than\n");
-    //    strcpy()
-    //}
-
-    //while (templen - curr > printsize) {
-        /*
-        printf("Iterating through string\n");
-        strncpy(printLine, temp + curr, 40);
-        printf("'%s'\n", printLine);
-
-        curr += 80;
-        */
-    //}
+    
 
     // Clear the line that we will print
     memset(printLine, 0, sizeof(printLine));
 
-    // printf("Start buf3 %i, end buf3 %i\n", startBuf3, endBuf3);
-
-    // printf("Starting print line '%s'\n", printLine);
-    // while (curr < templen) {
-    // while (startBuf3 <= endBuf3) {
+    
     // while we haven't found the end of the file
     while (foundEnd == false) {
-        // printf("%c", temp[curr]);
+        // copy character by character
         printLine [currPrint] = temp[curr];
-        // printf("%c\n", temp[curr]);
+        // increment each index by 1
         curr += 1;
         currPrint += 1;
-        // printf("Line: '%s', num %i\n\n", printLine, currPrint);
+        // If the string has 80 characters, set end of string to null, print line, then clear contents of line
         if (currPrint % 80 == 0) {
             printLine [currPrint] = '\0';
             printf("%s\n", printLine);
@@ -376,14 +346,15 @@ void printString() {
         }
 
         if (curr >= templen) {
-            // printf("Getting new line from buffer\n");
-            // get new line
+            // 
+            // get new line from arr3
             pthread_mutex_lock(&arr3Mutex);
             
             //printf("Printing buffer\n");
             //for (int i = 0; i < endBuf2; i++){
             //    printf("%s\n", buffer2[i]);
            // }
+            //  copy string to local variable, clear string in buffer and incement index by 1
             strcpy(temp, buffer3[startBuf3]);
             memset(buffer3[startBuf3], 0, sizeof(buffer3[startBuf3]));
             startBuf3 += 1 % 50;
@@ -391,16 +362,16 @@ void printString() {
             pthread_mutex_unlock(&arr3Mutex);
             
 
-            // printf("Temp in 4 = '%s'\n", temp);
+            // If you find line with -1
             if (strcmp(temp, "-1 ") == 0) {
-                // printf("MUST END PRINTING!\n");
+                // indicate we found end of file
                 foundEnd = true;
                 //return;
             }
 
             
             
-            // printf("Buffer = '%s'\n", buffer3[startBuf3]);
+            // get length of the string to pring
             
             templen = strlen(temp);
             curr = 0;
@@ -415,6 +386,9 @@ void printString() {
     // printf("Printline: '%s'\n", printLine);
 }
 
+/*
+ * calls the first thread's functionality
+*/
 void *thread1(void *args) {
     pthread_mutex_lock(&arr1Mutex);
     //printf("Inside thread 1\n");
@@ -425,6 +399,9 @@ void *thread1(void *args) {
     return NULL;
 }
 
+/*
+ * calls the second thread's functionality
+*/
 void *thread2(void *args) {
 
     pthread_mutex_lock(&arr2Mutex);
@@ -436,6 +413,9 @@ void *thread2(void *args) {
     return NULL;
 }
 
+/*
+ * calls the third thread's functionality
+*/
 void *thread3(void *args) {
     pthread_mutex_lock(&arr3Mutex);
 
@@ -446,6 +426,9 @@ void *thread3(void *args) {
     return NULL;
 }
 
+/*
+ * calls the fourth thread's functionality
+*/
 void *thread4(void *args) {
     // pthread_mutex_lock(&arr3Mutex);
 
@@ -477,14 +460,14 @@ int main(int argc, char *argv[])
     pthread_t input_t, remove_sep_t, rep_plus_t, output_t;
     // Create the threads
 
-    // getInput();
+    
     pthread_create(&input_t, NULL, thread1, NULL);
     
     pthread_create(&remove_sep_t, NULL, thread2, NULL);
     pthread_create(&rep_plus_t, NULL, thread3, NULL);
     pthread_create(&output_t, NULL, thread4, NULL);
 
-
+    // get the threads after they have finsihed functionality
     pthread_join(input_t, NULL);
     pthread_join(remove_sep_t, NULL);
     pthread_join(rep_plus_t, NULL);
